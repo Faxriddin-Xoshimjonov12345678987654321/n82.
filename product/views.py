@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError, NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 
 from .models import Product
 
@@ -43,9 +43,9 @@ def product_list(request):
         'products':product_list}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-def product_detail(request, id):
+def product_detail(request, pk):
     try:
-        product = Product.objects.get(id=id)
+        product = Product.objects.get(pk=pk)
     except Product.DoesNotExist:
         return Response({'msg': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -81,3 +81,50 @@ def product_update(request, pk):
         'price':product.price,
     }, status=status.HTTP_200_OK)
 
+@api_view(['PATCH'])
+def product_partial_update(request, pk):
+    product = Product.objects.filter(pk=pk).first()
+    
+    if not product:
+            raise NotFound('Product not found')
+
+    title = request.data.get('title')
+    desc = request.data.get('desc')
+    price = request.data.get('price')
+
+    if title is None and desc is None and price is None:
+        raise ValidationError(detail={
+            'msg': 'Nimadir yuborishingiz shart',
+        })
+
+    if title:
+        product.title = title
+
+    if desc:
+        product.desc = desc
+
+    if price:
+        product.price = price
+    
+    product.save()
+    
+    return Response({
+            'msg': 'Product partial updated', 
+            'title':product.title,
+            'desc':product.desc,
+            'price':product.price,
+        }, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+def product_delete(request, pk):
+    product = Product.objects.filter(pk=pk).first()
+        
+    if not product:
+        raise NotFound('Product not found')
+
+    product.delete()
+
+    return  Response({
+        'msg':  'Product deleted'
+    }, status=status.HTTP_200_OK)
+    
